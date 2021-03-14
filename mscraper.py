@@ -45,7 +45,7 @@ def action_choices(answers):
         ]
         return choices
     elif answers['action'] == 'Sair':
-        print('Obrigada por utilizar nosso Scraper, até logo!')
+        print('Obrigada por utilizar o Scraper, até logo!')
         raise SystemExit
     return choices
 

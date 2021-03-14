@@ -1,58 +1,25 @@
 import json
 import os
-
-import snscrape.modules.twitter as sntwitter
+from tqdm import tqdm
+from time import sleep
 
 
 class Scraper:
 
     @staticmethod
-    def api_scrape_tweets_by_content(since_date, until_date, keyword, max_tweets):
-        scraped_tweets = []
-        for i, tweet in enumerate(sntwitter.TwitterSearchScraper(
-                keyword + f' since:{since_date} '
-                          f'until:{until_date} '
-                          f'-filter:links '
-                          f'-filter:nativeretweets '
-        ).get_items()):
-            mentions = []
-            if tweet.mentionedUsers is not None:
-                for mentionedUser in tweet.mentionedUsers:
-                    mentions.append(mentionedUser.username)
-
-            is_rt = False
-            who_was_rt = None
-            if tweet.quotedTweet is not None:
-                who_was_rt = tweet.quotedTweet.username
-                is_rt = True
-
-            row_tweet = {
-                'Id': tweet.id,
-                'Label': tweet.user.username,
-                'link': f'https://twitter.com/{tweet.user.username}',
-                'content': tweet.renderedContent,
-                'mentioned_users': ' '.join(mentions),
-                'verified': tweet.user.verified,
-                'is_rt': is_rt,
-                'who_was_rt': who_was_rt
-            }
-
-            scraped_tweets.append(row_tweet)
-            if i > max_tweets:
-                break
-
-        return scraped_tweets
-
-    @staticmethod
     def cli_scrape_tweets_by_content(since_date, until_date, keyword, max_tweets):
-        os.system(f'snscrape '
-                  f'--jsonl '
-                  f'--max-results {max_tweets} '
-                  f'twitter-search "{keyword} since:{since_date} until:{until_date}"'
-                  f' > tmp_file.json')
-
+        with tqdm(total=100) as pbar:
+            os.system(f'snscrape '
+                      f'--jsonl '
+                      f'--max-results {max_tweets} '
+                      f'twitter-search "{keyword} since:{since_date} until:{until_date}"'
+                      f' > tmp_file.json')
+            for i in range(10):
+                sleep(0.1)
+                pbar.update(10)
         scraped_file = open('tmp_file.json')
         scraped_tweets = []
+
         for user_tweet in scraped_file:
             data = json.loads(user_tweet)
 
@@ -62,7 +29,6 @@ class Scraper:
             followers = data['user']['followersCount']
             mentioned_users = data['mentionedUsers']
             quoted_tweet = data['quotedTweet']
-
 
             mentions = mentions_in_tweet(mentioned_users)
             quoted_tweet, is_rt = is_retweet(quoted_tweet)
@@ -82,7 +48,6 @@ class Scraper:
                 'rt_id': quoted_tweet['rt_id']
             }
             scraped_tweets.append(tweet_info)
-
         scraped_file.close()
         os.remove("tmp_file.json")
 
